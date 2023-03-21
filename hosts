@@ -1,0 +1,10 @@
+[all]
+192.168.10.81
+
+[all:vars]
+mail_host=smtp.gmail.com
+port=587
+sender="your email"
+admin="admin email"
+addressee="client email"
+passwd="your email password"

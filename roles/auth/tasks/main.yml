@@ -1,0 +1,46 @@
+---
+- name: Check available storage
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Generate key
+      set_fact:
+        key: "{{ lookup('password', '/dev/null length=7 chars=digits') }}"
+
+    - name: Request authorization by mail
+      mail:
+        host: "{{ mail_host }}"
+        port: "{{ port }}"
+        username: "{{ sender }}"
+        password: "{{ passwd }}"
+        to: "{{ admin }}"
+        subject: Playbook Authorization
+        body: "The playbook needs authorization to continue.\nClick on the link and enter the password.\nlink: http://192.168.10.81/formulario.html\npassword: {{ key }}"
+      no_log: true
+
+    - name: Wait for confirmation
+      wait_for:
+        path: "/home/vagrant/.2fa/datos.txt"
+        search_regex: "{{ key }}"
+        timeout: 300
+
+    - name: Store the content of the file in a variable
+      slurp:
+        src: "/home/vagrant/.2fa/datos.txt"
+      register: result
+
+    - name: Finish execution of the playbook if it has been indicated not to continue the execution of the playbook
+      meta: end_play
+      when: ("no" in (result.content | b64decode))
+
+    - name: Send email to the client notifying that the playbook has continued its execution
+      mail:
+        host: "{{ mail_host }}"
+        port: "{{ port }}"
+        username: "{{ sender }}"
+        password: "{{ passwd }}"
+        to: "{{ addressee }}"
+        subject: Playbook Authorization
+        body: "The execution of the playbook has been authorized"
+      no_log: true
